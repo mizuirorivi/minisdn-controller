@@ -116,4 +116,37 @@ tail -f /var/log/openvswitch/ovs-vswitchd.log  # ログを直接確認
 docker exec -it minisdn-controller tcpdump -i any port 6634 -vv
 ```
 
+### ovs-ofctl monitor で何も出ないときの確認
+`ovs-ofctl monitor br0` は「その瞬間に流れる OpenFlow メッセージ」を表示するだけなので、ハンドシェイク済みで追加のやり取りがないと何も出ません。以下の手順で再発火/確認できます。
+
+1. 接続状態を確認:
+```bash
+docker exec minisdn-ovs ovs-vsctl show
+docker exec minisdn-ovs ovs-vsctl get-controller br0
+docker exec minisdn-ovs ovs-ofctl show br0
+docker logs minisdn-controller | tail -n 50
+```
+
+2. ハンドシェイクを再発火（monitor を別ターミナルで起動してから実行）:
+```bash
+# ターミナルA
+docker exec -it minisdn-ovs ovs-ofctl -O OpenFlow10 monitor br0
+
+# ターミナルB
+docker exec minisdn-ovs ovs-vsctl set-controller br0 tcp:controller:6634
+docker exec minisdn-ovs ovs-ofctl -O OpenFlow10 show tcp:controller:6634 >/dev/null
+```
+
+3. 追加のメッセージを流したい場合（オプション）:
+```bash
+docker exec minisdn-ovs ovs-vsctl add-port br0 dummy0 -- set interface dummy0 type=dummy
+docker exec minisdn-ovs ovs-ofctl -O OpenFlow10 dump-flows br0
+```
+
+4. それでも見えない場合の観測:
+```bash
+docker exec minisdn-ovs ovs-ofctl -O OpenFlow10 snoop tcp:controller:6634
+docker exec minisdn-controller tcpdump -i any port 6634 -vv
+```
+
 観察が終わったら、必要に応じて `docker logs -f minisdn-controller` でログも追跡し、終了後に `cd tests/integration && docker-compose down -v` でクリーンアップしてください。
