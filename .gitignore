@@ -30,3 +30,5 @@ Thumbs.db
 
 # Project specific
 *.pcapng
+*.pcap
+tests/integration/capture.pcap

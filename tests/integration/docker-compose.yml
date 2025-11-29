@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  controller:
+    build:
+      context: ../..
+      dockerfile: tests/integration/Dockerfile
+    container_name: minisdn-controller
+    networks:
+      openflow-net:
+        aliases:
+          - controller
+    stdin_open: true
+    tty: true
+
+  ovs:
+    image: globocom/openvswitch
+    container_name: minisdn-ovs
+    privileged: true
+    platform: linux/amd64
+    networks:
+      - openflow-net
+    stdin_open: true
+    tty: true
+
+networks:
+  openflow-net:
+    driver: bridge
