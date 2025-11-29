@@ -39,14 +39,64 @@ python main.py
 ```
 
 OpenFlow スイッチ（Mininet や Open vSwitch など）から接続があると、Hello メッセージを送信し、スイッチからのメッセージを受信して表示します。
+ここではOpen vSwitchを使用して、コントローラーとスイッチを接続します。
+```
+docker run --privileged --platform=linux/amd64 -it globocom/openvswitch 
+```
+コンテナ内に入って、以下のコマンドを実行します。
+```
+ovs-vsctl set-controller br0 tcp:<IPAddress>:6634
+```
+また、以下のコマンドでスイッチの状態を確認できます。
+```
+ovs-vsctl show
+```
+次に、以下のコマンドでスイッチを起動します。
+```
+/usr/sbin/ovs-vswitchd --detach
+```
 
 ## プロジェクト構成
 
 ```
 .
-├── main.py           # エントリーポイント。ソケット通信とOpenFlowハンドシェイクのロジック
-├── pyproject.toml    # プロジェクト設定ファイル
-└── README.md         # ドキュメント
+├── src/
+│   ├── main.py           # エントリーポイント
+│   ├── controller.py     # コントローラークラス
+│   ├── openflow.py       # OpenFlowプロトコル実装
+│   └── log.py            # ロギングユーティリティ
+├── tests/
+│   └── unit/             # ユニットテスト
+│       ├── test_controller.py
+│       ├── test_openflow.py
+│       └── test_log.py
+├── pyproject.toml        # プロジェクト設定ファイル
+└── README.md             # ドキュメント
+```
+
+## テスト
+
+ユニットテストは `tests/unit/` ディレクトリに配置されています。
+
+### テストの実行
+
+`uv` を使用する場合:
+```bash
+uv run python -m unittest discover tests
+```
+
+`uv` を使用しない場合:
+```bash
+python -m unittest discover tests
+```
+
+特定のテストファイルのみを実行する場合:
+```bash
+# uv を使用
+uv run python -m unittest tests.unit.test_openflow
+
+# uv を使用しない
+python -m unittest tests.unit.test_openflow
 ```
 
 ## 今後の予定
