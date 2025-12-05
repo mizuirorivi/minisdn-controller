@@ -1,0 +1,5 @@
+FROM globocom/openvswitch
+
+RUN apt-get update && apt-get install -y tcpdump
+
+RUN ovs-vsctl add-br br0

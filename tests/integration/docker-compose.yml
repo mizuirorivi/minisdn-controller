@@ -10,6 +10,8 @@ services:
       openflow-net:
         aliases:
           - controller
+    volumes:
+      - ../../src:/app/src:ro
     stdin_open: true
     tty: true
 

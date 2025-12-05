@@ -29,6 +29,7 @@ sleep 2
 docker exec minisdn-ovs ovs-vsctl --if-exists del-br br0
 docker exec minisdn-ovs ovs-vsctl add-br br0
 docker exec minisdn-ovs ovs-vsctl set-controller br0 tcp:controller:6634
+docker exec minisdn-ovs ovs-vsctl set bridge br0 protocols=OpenFlow10
 docker exec minisdn-ovs ip link set dev br0 up
 sleep 2
 
