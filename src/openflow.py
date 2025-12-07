@@ -13,6 +13,7 @@ OFPT_ECHO_REPLY       = 3
 OFPT_FEATURES_REQUEST = 5
 OFPT_FEATURES_REPLY   = 6
 OFPT_PACKET_IN        = 10
+OFPT_PORT_STATUS      = 12
 OFPT_FLOW_MOD         = 14
 
 @dataclass
@@ -104,12 +105,17 @@ def parse_phy_ports(raw_ports: bytes) -> List[OFPhyPort]:
     """
     PORT_SIZE = 48
     ports = []
+
+    if len(raw_ports) % PORT_SIZE != 0:
+        error(f"Invalid port block length: {len(raw_ports)} bytes (not multiple of {PORT_SIZE})")
+        return ports
+
     len_ports = len(raw_ports) // PORT_SIZE
-    if(len_ports != 0):
-        error("Invalid port block length")
-    
     info(f"number of ports: {len_ports}")
-    ports = [parse_phy_port(raw_ports[i:i + PORT_SIZE]) for i in range(0, len(raw_ports), PORT_SIZE)]
+
+    if len_ports > 0:
+        ports = [parse_phy_port(raw_ports[i:i + PORT_SIZE]) for i in range(0, len(raw_ports), PORT_SIZE)]
+
     return ports
 
 
@@ -176,12 +182,16 @@ def handler_features_reply(conn,hdr,body):
     parse_features_reply(body)
 def handler_packet_in(conn,hdr,body):
     success(f"Packet in message received(xid = {hdr.xid})")
-    
+def handler_port_status(conn,hdr,body):
+    info(f"Port status message received(xid = {hdr.xid})")
+    # TODO: Parse and handle port status changes
+
 handlers = {
         OFPT_HELLO:  handler_hello,
         OFPT_FEATURES_REPLY:  handler_features_reply,
         OFPT_PACKET_IN: handler_packet_in,
         OFPT_ECHO_REQUEST: handler_echo_request,
+        OFPT_PORT_STATUS: handler_port_status,
 }
 
 

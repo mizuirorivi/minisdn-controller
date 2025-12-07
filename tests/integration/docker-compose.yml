@@ -16,7 +16,9 @@ services:
     tty: true
 
   ovs:
-    image: globocom/openvswitch
+    build:
+      context: .
+      dockerfile: Dockerfile.ovs
     container_name: minisdn-ovs
     privileged: true
     platform: linux/amd64
