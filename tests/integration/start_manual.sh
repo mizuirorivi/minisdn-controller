@@ -15,60 +15,33 @@ echo -e "${YELLOW}=== Starting Manual Development Environment ===${NC}"
 echo ""
 
 # Start containers (source code is mounted as volume for live updates)
-echo -e "${YELLOW}[1/5] Starting Docker containers...${NC}"
+echo -e "${YELLOW}[1/4] Starting Docker containers...${NC}"
 docker-compose up -d
 
 # Wait for controller to be ready
-echo -e "${YELLOW}[2/5] Waiting for controller to start (3 seconds)...${NC}"
+echo -e "${YELLOW}[2/4] Waiting for controller to start (3 seconds)...${NC}"
 sleep 3
 
-# Configure OVS (but don't connect to controller yet)
-echo -e "${YELLOW}[3/5] Configuring Open vSwitch (without controller connection)...${NC}"
+# Configure OVS
+echo -e "${YELLOW}[3/4] Configuring Open vSwitch...${NC}"
 docker exec minisdn-ovs /usr/share/openvswitch/scripts/ovs-ctl start 2>/dev/null || true
 sleep 2
 docker exec minisdn-ovs ovs-vsctl --if-exists del-br br0
 docker exec minisdn-ovs ovs-vsctl add-br br0
 docker exec minisdn-ovs ovs-vsctl set bridge br0 protocols=OpenFlow10
-docker exec minisdn-ovs ip link set dev br0 up
 
 # Get controller IP
 CONTROLLER_IP=$(docker inspect minisdn-controller --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
 echo -e "${YELLOW}Controller IP: ${GREEN}${CONTROLLER_IP}${NC}"
 
-# Auto-start Wireshark BEFORE establishing OpenFlow connection
-WIRESHARK_BIN=""
-if command -v wireshark &> /dev/null; then
-    WIRESHARK_BIN="wireshark"
-elif [ -x "/Applications/Wireshark.app/Contents/MacOS/Wireshark" ]; then
-    WIRESHARK_BIN="/Applications/Wireshark.app/Contents/MacOS/Wireshark"
-fi
-
-if [ -n "$WIRESHARK_BIN" ]; then
-    echo -e "${YELLOW}[4/5] Starting Wireshark with live packet capture...${NC}"
-    echo -e "${GREEN}Wireshark will capture the entire OpenFlow handshake including xid=2 and xid=3${NC}"
-    # Start Wireshark in background
-    docker exec -i minisdn-ovs \
-    tcpdump -n -i any -U -w - 'tcp port 6634' 2>/dev/null \
-    | tee capture.pcap \
-    | "${WIRESHARK_BIN}" -k -i - &
-
-    # Give Wireshark time to start up and be ready to capture
-    sleep 3
-    echo -e "  ${GREEN}✓ Wireshark started and ready to capture${NC}"
-    echo ""
-else
-    echo -e "${YELLOW}[4/5] Wireshark not found, skipping packet capture${NC}"
-    echo ""
-fi
-
-# NOW establish the OpenFlow connection
-echo -e "${YELLOW}[5/5] Establishing OpenFlow connection...${NC}"
 # Set controller (use IP address instead of hostname for reliability)
 docker exec minisdn-ovs ovs-vsctl set-controller br0 tcp:${CONTROLLER_IP}:6634
 docker exec minisdn-ovs ovs-vsctl set bridge br0 fail-mode=standalone
 docker exec minisdn-ovs ovs-vsctl set controller br0 max-backoff=1000
+docker exec minisdn-ovs ip link set dev br0 up
 
 # Create dummy interfaces to trigger port events (this forces OVS to connect)
+echo -e "${YELLOW}[4/4] Creating dummy ports and establishing OpenFlow connection...${NC}"
 sleep 1
 docker exec minisdn-ovs ip link add veth0 type veth peer name veth1 2>/dev/null || true
 docker exec minisdn-ovs ip link set veth0 up 2>/dev/null || true
@@ -95,6 +68,23 @@ else
     echo -e "    Try: docker exec minisdn-ovs ovs-ofctl show tcp:${CONTROLLER_IP}:6634"
 fi
 echo ""
+
+# Auto-start Wireshark if available
+WIRESHARK_BIN=""
+if command -v wireshark &> /dev/null; then
+    WIRESHARK_BIN="wireshark"
+elif [ -x "/Applications/Wireshark.app/Contents/MacOS/Wireshark" ]; then
+    WIRESHARK_BIN="/Applications/Wireshark.app/Contents/MacOS/Wireshark"
+fi
+
+if [ -n "$WIRESHARK_BIN" ]; then
+    echo -e "${YELLOW}Starting Wireshark with live packet capture...${NC}"
+    # Start Wireshark in background
+    (docker exec minisdn-controller tcpdump -i any -U -w - port 6634 2>/dev/null | "${WIRESHARK_BIN}" -k -i - &) >/dev/null 2>&1
+    sleep 2
+    echo -e "  ${GREEN}✓ Wireshark started in background${NC}"
+    echo ""
+fi
 
 echo -e "${YELLOW}Useful commands:${NC}"
 echo -e "  ${GREEN}View controller logs:${NC}  docker logs -f minisdn-controller"

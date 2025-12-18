@@ -1,4 +1,5 @@
 FROM globocom/openvswitch
 
-RUN apk update && apk add tcpdump
+RUN apt-get update && apt-get install -y tcpdump
 
+RUN ovs-vsctl add-br br0

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 from io import StringIO
-from src.log import info, success, error, debug
+from src.utils.log import info, success, error, debug
 
 
 class TestLogFunctions(unittest.TestCase):

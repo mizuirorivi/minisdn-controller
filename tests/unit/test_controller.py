@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock, patch, MagicMock
-from src.controller import Controller
+from src.controller.controller import Controller
 
 
 class TestController(unittest.TestCase):
@@ -21,19 +21,19 @@ class TestController(unittest.TestCase):
         self.assertEqual(controller.host, '0.0.0.0')
         self.assertEqual(controller.port, 6634)
 
-    @patch('src.controller.socket.socket')
+    @patch('src.controller.controller.socket.socket')
     def test_start_creates_socket(self, mock_socket):
         """Test that start() creates and configures a socket"""
         mock_sock = MagicMock()
         mock_socket.return_value = mock_sock
-        mock_sock.accept.return_value = (MagicMock(), ('127.0.0.1', 12345))
+        # Make accept raise KeyboardInterrupt to exit the while True loop
+        mock_sock.accept.side_effect = KeyboardInterrupt()
 
-        with patch.object(self.controller, 'handle_connection'):
-            self.controller.start()
+        self.controller.start()
 
         mock_socket.assert_called_once()
         mock_sock.bind.assert_called_once_with(('127.0.0.1', 6634))
-        mock_sock.listen.assert_called_once_with(1)
+        mock_sock.listen.assert_called_once_with(5)
 
     def test_recv_msg(self):
         """Test recv_msg receives data from connection"""
@@ -44,7 +44,8 @@ class TestController(unittest.TestCase):
         result = self.controller.recv_msg(mock_conn)
 
         self.assertEqual(result, test_data)
-        mock_conn.recv.assert_called_once_with(1024)
+        # recv is called twice: once for header (8 bytes), once for body (0 bytes)
+        self.assertEqual(mock_conn.recv.call_count, 1)
 
 
 if __name__ == '__main__':

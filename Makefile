@@ -17,7 +17,7 @@ test: test-unit test-integration
 
 test-unit:
 	@echo "Running unit tests..."
-	python3 -m unittest discover tests/unit
+	uv run python -m unittest discover tests/unit
 
 test-integration:
 	@echo "Running integration tests..."
