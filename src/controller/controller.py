@@ -77,11 +77,13 @@ class Controller:
         try:
             # -- handshake --
             # send hello message
-            conn.send(make_hello(self.next_xid()))
-            success("Send Hello Message")
+            hello_xid = self.next_xid()
+            conn.send(make_hello(hello_xid))
+            success(f"Send Hello Message (xid = {hello_xid})")
             # send features request message
-            conn.send(make_features_request(self.next_xid()))
-            success("Send Features Request Message")
+            features_xid = self.next_xid()
+            conn.send(make_features_request(features_xid))
+            success(f"Send Features Request Message (xid = {features_xid})")
             # -- end of handshake --
             # -- message loop --
             while True:

@@ -31,25 +31,24 @@ docker exec minisdn-ovs ovs-vsctl --if-exists del-br br0
 docker exec minisdn-ovs ovs-vsctl add-br br0
 docker exec minisdn-ovs ovs-vsctl set bridge br0 protocols=OpenFlow10
 
-
 # Get controller IP
 CONTROLLER_IP=$(docker inspect minisdn-controller --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
 echo -e "${YELLOW}Controller IP: ${GREEN}${CONTROLLER_IP}${NC}"
 
+# Start tcpdump in controller container BEFORE connecting OVS
+echo -e "${YELLOW}[4/5] Starting packet capture (before OpenFlow connection)...${NC}"
+CAPTURE_FILE="/tmp/openflow_capture.pcap"
+docker exec -d minisdn-controller tcpdump -i any -w ${CAPTURE_FILE} port 6634 >/dev/null 2>&1
+sleep 1
+
 # Set controller (use IP address instead of hostname for reliability)
+echo -e "${YELLOW}[5/5] Connecting OVS to controller and establishing OpenFlow connection...${NC}"
 docker exec minisdn-ovs ovs-vsctl set-controller br0 tcp:${CONTROLLER_IP}:6634
 docker exec minisdn-ovs ovs-vsctl set bridge br0 fail-mode=standalone
 docker exec minisdn-ovs ovs-vsctl set controller br0 max-backoff=1000
 docker exec minisdn-ovs ip link set dev br0 up
 
-# Start tcpdump in controller container
-echo -e "${YELLOW}[4/5] Starting packet capture on controller...${NC}"
-CAPTURE_FILE="/tmp/openflow_capture.pcap"
-docker exec -d minisdn-controller tcpdump -i any -w ${CAPTURE_FILE} port 6634 >/dev/null 2>&1
-sleep 1
-
 # Create dummy interfaces to trigger port events (this forces OVS to connect)
-echo -e "${YELLOW}[5/5] Creating dummy ports and establishing OpenFlow connection...${NC}"
 sleep 1
 docker exec minisdn-ovs ip link add veth0 type veth peer name veth1 2>/dev/null || true
 docker exec minisdn-ovs ip link set veth0 up 2>/dev/null || true

@@ -6,8 +6,7 @@ from typing import List, TYPE_CHECKING
 from src.controller.interface import ControllerIF
 
 
-# spec(https://opennetworking.org/wp-content/uploads/2013/04/openflow-spec-v1.0.0.pdf)
-# see openflow switch spec(https://opennetworking.org/wp-content/uploads/2014/10/openflow-spec-v1.1.0.pdf)
+# see openflow spec(https://opennetworking.org/wp-content/uploads/2013/04/openflow-spec-v1.0.0.pdf)
 
 # Message types enum ofp_type (in official openflow spec 18p)
 OFPT_HELLO            = 0
@@ -18,7 +17,9 @@ OFPT_FEATURES_REQUEST = 5
 OFPT_FEATURES_REPLY   = 6
 OFPT_PACKET_IN        = 10
 OFPT_PORT_STATUS      = 12
+OFPT_PACKET_OUT       = 13
 OFPT_FLOW_MOD         = 14
+
 
 @dataclass
 class OFHeader:
@@ -209,6 +210,8 @@ def make_echo_reply(hdr):
 def make_features_request(xid):
     return packheader(OFPT_FEATURES_REQUEST, 8, xid)
 
+def make_packet_out(hdr: OFHeader, buffer_id,in_port, out_port):
+    return packheader(OFPT_PACKET_OUT, hdr.length, hdr.xid)
 
 def handler_hello(ctrl: ControllerIF, conn, hdr, body):
     success(f"Hello message received(xid = {hdr.xid})")
